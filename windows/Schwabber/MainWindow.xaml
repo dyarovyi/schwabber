@@ -1,0 +1,387 @@
+<Window x:Class="Schwabber.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Schwabber"
+        x:Name="Root"
+        Title="Schwabber" Width="600" Height="420" MinWidth="560" MinHeight="420"
+        Icon="pack://application:,,,/Schwabber.ico" AllowDrop="True" Drop="OnDrop" DragEnter="OnDragOver" DragOver="OnDragOver" DragLeave="OnDragLeave" KeyDown="OnWindowKeyDown"
+        Background="{DynamicResource WindowBackground}" Foreground="{DynamicResource PrimaryText}" UseLayoutRounding="True" TextOptions.TextFormattingMode="Display">
+    <Window.Resources>
+        <local:ShareWidthConverter x:Key="ShareWidth" />
+    </Window.Resources>
+    <Window.CommandBindings>
+        <CommandBinding Command="{x:Static local:MainWindow.OpenCommand}" Executed="OnOpen" CanExecute="CanOpen" />
+        <CommandBinding Command="{x:Static local:MainWindow.SaveCommand}" Executed="OnSaveRecording" CanExecute="CanSaveRecording" />
+        <CommandBinding Command="{x:Static local:MainWindow.HelpCommand}" Executed="OnHelp" />
+    </Window.CommandBindings>
+    <Window.InputBindings>
+        <KeyBinding Key="O" Modifiers="Control" Command="{x:Static local:MainWindow.OpenCommand}" />
+        <KeyBinding Key="S" Modifiers="Control" Command="{x:Static local:MainWindow.SaveCommand}" />
+        <KeyBinding Key="F1" Command="{x:Static local:MainWindow.HelpCommand}" />
+    </Window.InputBindings>
+
+    <DockPanel>
+        <!-- Menu bar: the macOS app keeps secondary actions in File, Sessions and Capture menus. -->
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_File" SubmenuOpened="OnMenuOpened">
+                <MenuItem Header="_Open capture…" Command="{x:Static local:MainWindow.OpenCommand}" InputGestureText="Ctrl+O" />
+                <MenuItem Header="_Save PCAP…" Command="{x:Static local:MainWindow.SaveCommand}" InputGestureText="Ctrl+S" />
+                <MenuItem x:Name="ExportMenuItem" Header="_Export selected sessions…" Click="OnExportSelected" />
+                <MenuItem x:Name="WiresharkMenuItem" Header="Open selected in _Wireshark" Click="OnOpenInWireshark" />
+                <Separator />
+                <MenuItem Header="E_xit" Click="OnExit" />
+            </MenuItem>
+            <MenuItem Header="_Sessions">
+                <MenuItem Header="Select _shown" Click="OnSelectShown" />
+                <MenuItem Header="_Clear selection" Click="OnClear" />
+            </MenuItem>
+            <MenuItem Header="_Capture" SubmenuOpened="OnMenuOpened">
+                <MenuItem x:Name="InterfaceMenu" Header="_Interface" />
+                <MenuItem x:Name="RefreshMenuItem" Header="_Refresh interfaces" Click="OnRefreshInterfaces" />
+                <Separator />
+                <MenuItem x:Name="StartMenuItem" Header="_Start recording" Click="OnStartRecording" />
+                <MenuItem x:Name="StopMenuItem" Header="S_top recording" Click="OnStopRecording" />
+            </MenuItem>
+            <MenuItem Header="_View" SubmenuOpened="OnMenuOpened">
+                <MenuItem x:Name="ShowEndpointsMenuItem" Header="Show _endpoints" IsCheckable="True" IsChecked="True" Click="OnShowEndpoints"
+                          ToolTip="Show source and destination address:port under each session" />
+                <MenuItem x:Name="ClearPinsMenuItem" Header="Clear timeline _pins" Click="OnClearPins" />
+                <Separator />
+                <MenuItem Header="_Theme">
+                    <MenuItem x:Name="ThemeSystem" Header="_System theme" Click="OnThemeMenu" Tag="0" />
+                    <MenuItem x:Name="ThemeLight" Header="_Light" Click="OnThemeMenu" Tag="1" />
+                    <MenuItem x:Name="ThemeDark" Header="_Dark" Click="OnThemeMenu" Tag="2" />
+                </MenuItem>
+            </MenuItem>
+            <MenuItem Header="_Help">
+                <MenuItem Header="Schwabber _Help" Command="{x:Static local:MainWindow.HelpCommand}" InputGestureText="F1" />
+                <MenuItem Header="_Keyboard shortcuts" Click="OnShortcutsHelp" />
+                <Separator />
+                <MenuItem Header="_About Schwabber" Click="OnAbout" />
+            </MenuItem>
+        </Menu>
+
+        <!-- Compact title bar -->
+        <Grid DockPanel.Dock="Top" x:Name="HeaderBar" Margin="12,7" MinHeight="65">
+            <DockPanel x:Name="FileHeader" Visibility="Collapsed" VerticalAlignment="Center">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <ProgressBar x:Name="LoadingIndicator" IsIndeterminate="True" Width="60" Height="6" Margin="0,0,8,0" Visibility="Collapsed" />
+                    <TextBlock x:Name="RecordingStatus" FontSize="11" Foreground="#FF3B30" VerticalAlignment="Center" Visibility="Collapsed" />
+                    <Button x:Name="StopButton" Click="OnStopRecording" Visibility="Collapsed">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE71A;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                            <TextBlock Text="Stop" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <local:MiddleTrimTextBlock x:Name="TitleText" FontSize="14" MaxWidth="600" VerticalAlignment="Center" />
+                    <TextBlock x:Name="CountsText" Style="{StaticResource Caption}" Margin="12,0,0,0" />
+                </StackPanel>
+            </DockPanel>
+            <TextBlock x:Name="Wordmark" Text="𝔖𝔠𝔥𝔴𝔞𝔟𝔟𝔢𝔯" FontFamily="Cambria Math, Segoe UI Symbol" FontSize="51"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" AutomationProperties.Name="Schwabber" />
+        </Grid>
+        <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource DividerBrush}" />
+
+        <Grid Background="Transparent">
+            <!-- Empty state -->
+            <StackPanel x:Name="EmptyState" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="460">
+                <TextBlock Text="&#xE9D9;" FontFamily="{StaticResource IconFont}" FontSize="40" Foreground="{DynamicResource SecondaryText}" HorizontalAlignment="Center" />
+                <TextBlock Text="Open a packet capture" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,10,0,0" />
+                <TextBlock Text="Choose a .pcap or .pcapng file to see TCP and UDP sessions on a shared timeline." TextWrapping="Wrap" TextAlignment="Center"
+                           Foreground="{DynamicResource SecondaryText}" Margin="0,6,0,0" />
+                <Button Command="{x:Static local:MainWindow.OpenCommand}" HorizontalAlignment="Center" Margin="0,14,0,0">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE838;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBlock Text="Open PCAP…" />
+                    </StackPanel>
+                </Button>
+                <ComboBox x:Name="CaptureInterfacePicker" DisplayMemberPath="Label" MaxWidth="320" Margin="0,12,0,0"
+                          ToolTip="Capture interface" SelectionChanged="OnInterfaceChanged" />
+                <Button x:Name="RecordButton" Click="OnStartRecording" HorizontalAlignment="Center" Margin="0,12,0,0"
+                        ToolTip="Record live traffic from the selected interface (requires Npcap)">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE7C8;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBlock Text="Record PCAP" />
+                    </StackPanel>
+                </Button>
+                <TextBlock Style="{StaticResource Caption}" HorizontalAlignment="Center" Margin="0,8,0,0"
+                           Text="or drag a .pcap or .pcapng file here" />
+                <TextBlock x:Name="NpcapHint" Style="{StaticResource Caption}" HorizontalAlignment="Center" Margin="0,8,0,0" Visibility="Collapsed"
+                           Text="Live recording needs Npcap. Offline files work without it." />
+            </StackPanel>
+
+            <!-- Loaded capture -->
+            <Grid x:Name="CaptureView" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" MinHeight="120" />
+                    <RowDefinition x:Name="SplitterRow" Height="5" />
+                    <RowDefinition x:Name="InspectorRow" Height="260" MinHeight="40" />
+                </Grid.RowDefinitions>
+
+                <!-- Filters -->
+                <DockPanel Margin="12,6">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="Sort" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <ComboBox x:Name="SortPicker" Width="130" SelectedIndex="0" SelectionChanged="OnSortChanged">
+                            <ComboBoxItem>Chronological</ComboBoxItem>
+                            <ComboBoxItem>Largest first</ComboBoxItem>
+                        </ComboBox>
+                        <TextBlock Text="Zoom" Foreground="{DynamicResource SecondaryText}" VerticalAlignment="Center" Margin="14,0,8,0" />
+                        <!-- Position 0..1 on a logarithmic scale: left fits the capture, right shows two seconds across the visible timeline. -->
+                        <Slider x:Name="ZoomSlider" Minimum="0" Maximum="1" Value="0" Width="140" VerticalAlignment="Center" ValueChanged="OnZoomChanged"
+                                IsMoveToPointEnabled="True" SmallChange="0.05" LargeChange="0.1" AutomationProperties.Name="Timeline zoom"
+                                ToolTip="Left: fit capture. Right: two seconds across the visible timeline (one second per half)." />
+                        <TextBlock x:Name="ShownText" FontSize="11" Margin="10,0,0,0" VerticalAlignment="Center" Typography.NumeralAlignment="Tabular" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Grid Width="420">
+                            <TextBox x:Name="QueryBox" Padding="4,3" VerticalContentAlignment="Center" TextChanged="OnQueryChanged"
+                                     ToolTip="Text searches metadata and exact UTF-8 payload bytes. Hex uses x00x01xFF notation. Matches stay within individual packet payloads." />
+                            <TextBlock x:Name="QueryPlaceholder" Text="Filter IP, port, details, payload text or x00x01…" IsHitTestVisible="False"
+                                       Foreground="{DynamicResource PlaceholderText}" Margin="8,0,0,0" VerticalAlignment="Center" />
+                        </Grid>
+                        <Button x:Name="ProtocolsButton" Width="150" Margin="8,0,0,0" Click="OnProtocolsClick">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE71C;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                <TextBlock x:Name="ProtocolsLabel" Text="Protocols: All" />
+                            </StackPanel>
+                        </Button>
+                        <Popup x:Name="ProtocolsPopup" PlacementTarget="{Binding ElementName=ProtocolsButton}" Placement="Bottom" StaysOpen="False"
+                               AllowsTransparency="True" PopupAnimation="Fade" VerticalOffset="4">
+                            <Border Background="{DynamicResource PopupBackground}" BorderBrush="{DynamicResource InputBorder}" BorderThickness="1"
+                                    CornerRadius="6" Padding="16" Width="260">
+                                <StackPanel>
+                                    <TextBlock Text="Display protocols" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,10" Foreground="{DynamicResource PrimaryText}" />
+                                    <CheckBox x:Name="AllProtocols" Content="All" Click="OnAllProtocolsClick" />
+                                    <Border Height="1" Background="{DynamicResource DividerBrush}" Margin="0,10" />
+                                    <UniformGrid x:Name="ProtocolGrid" Columns="2" />
+                                    <DockPanel Margin="0,12,0,0">
+                                        <Button DockPanel.Dock="Right" Content="Done" IsDefault="True" Click="OnProtocolsDone" />
+                                        <Button Content="Clear" Click="OnProtocolsClear" Margin="0" HorizontalAlignment="Left" />
+                                    </DockPanel>
+                                </StackPanel>
+                            </Border>
+                        </Popup>
+                        <TextBlock x:Name="InvalidHexText" Text="Invalid hex" FontSize="11" Foreground="#FF3B30" VerticalAlignment="Center" Margin="10,0,0,0" Visibility="Collapsed" />
+                    </StackPanel>
+                </DockPanel>
+
+                <local:MiddleTrimTextBlock x:Name="ExportStatusText" Grid.Row="1" Margin="12,0,12,8" FontSize="11"
+                                           Foreground="{DynamicResource SecondaryText}" Visibility="Collapsed" HorizontalAlignment="Stretch" />
+
+                <!-- Timeline -->
+                <Grid x:Name="TimelineArea" Grid.Row="2" SizeChanged="OnTimelineAreaSizeChanged">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <ScrollViewer x:Name="HeaderScroller" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Focusable="False">
+                        <StackPanel Orientation="Horizontal" Margin="16,0">
+                            <Grid Panel.ZIndex="1" Height="38">
+                                <Grid.RenderTransform>
+                                    <TranslateTransform X="{Binding HorizontalScroll, ElementName=Root}" />
+                                </Grid.RenderTransform>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="{Binding SessionColumnWidth, ElementName=Root}" />
+                                    <ColumnDefinition Width="12" />
+                                </Grid.ColumnDefinitions>
+                                <Rectangle Grid.ColumnSpan="2" Fill="{DynamicResource WindowBackground}" Margin="-16,0,0,0" />
+                                <TextBlock Text="SESSION / ENDPOINTS" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" />
+                                <Rectangle Grid.Column="1" Fill="{DynamicResource DividerBrush}" />
+                                <TextBlock Grid.Column="1" Text="↔" FontSize="9" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,12,0,0"
+                                           Foreground="{DynamicResource SecondaryText}" />
+                            </Grid>
+                            <local:TimelineHeader x:Name="Ruler" Width="{Binding TimelineWidth, ElementName=Root}" Height="38" Duration="{Binding Duration, ElementName=Root}"
+                                                  Cursor="Hand" MouseLeftButtonDown="OnRulerMouseDown" LostMouseCapture="OnRulerLostMouseCapture" MouseLeftButtonUp="OnRulerClick" ContextMenuOpening="OnRulerContextMenu"
+                                                  MouseMove="OnRulerMouseMove" ToolTip="Click to pin a time across all sessions. Drag a pin to move it; right-click to add a note or remove it.">
+                                <local:TimelineHeader.ContextMenu>
+                                    <ContextMenu />
+                                </local:TimelineHeader.ContextMenu>
+                            </local:TimelineHeader>
+                        </StackPanel>
+                    </ScrollViewer>
+                    <Border Grid.Row="0" Height="1" VerticalAlignment="Bottom" Background="{DynamicResource DividerBrush}" />
+
+                    <ItemsControl x:Name="SessionList" Grid.Row="1" Focusable="True" FocusVisualStyle="{x:Null}" KeyboardNavigation.DirectionalNavigation="None"
+                                  MouseLeftButtonDown="OnTimelineBlankClick" PreviewMouseWheel="OnTimelineWheel"
+                                  VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                                  VirtualizingPanel.ScrollUnit="Pixel" ScrollViewer.CanContentScroll="True"
+                                  ScrollViewer.ScrollChanged="OnListScrollChanged">
+                        <ItemsControl.Template>
+                            <ControlTemplate TargetType="ItemsControl">
+                                <ScrollViewer x:Name="ListScroller" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" CanContentScroll="True" Focusable="False" Background="Transparent">
+                                    <ItemsPresenter Margin="16,0" />
+                                </ScrollViewer>
+                            </ControlTemplate>
+                        </ItemsControl.Template>
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <VirtualizingStackPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type local:SessionItem}">
+                                <Border Background="{Binding RowBackground}" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1"
+                                        MouseLeftButtonDown="OnRowClick" ContextMenuOpening="OnRowContextMenu" Cursor="Arrow">
+                                    <Border.ContextMenu>
+                                        <ContextMenu />
+                                    </Border.ContextMenu>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="{Binding SessionColumnWidth, ElementName=Root}" />
+                                            <ColumnDefinition Width="12" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <local:TimelineBar Grid.Column="2" Width="{Binding TimelineWidth, ElementName=Root}" Height="{Binding RowHeight, ElementName=Root}"
+                                                           Session="{Binding Session}" Accent="{Binding Accent}"
+                                                           CaptureStart="{Binding CaptureStart, ElementName=Root}" Duration="{Binding Duration, ElementName=Root}"
+                                                           HighlightPacketId="{Binding HighlightedPacketId, ElementName=Root}" />
+                                        <!-- The label cell and the column handle move with the horizontal scroll offset so they stay pinned on the left. -->
+                                        <Grid Grid.ColumnSpan="2" Panel.ZIndex="1">
+                                            <Grid.RenderTransform>
+                                                <TranslateTransform X="{Binding HorizontalScroll, ElementName=Root}" />
+                                            </Grid.RenderTransform>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="12" />
+                                            </Grid.ColumnDefinitions>
+                                            <Rectangle Grid.ColumnSpan="2" Fill="{DynamicResource WindowBackground}" Margin="-16,0,0,0" />
+                                            <Rectangle Fill="{Binding RowBackground}" Margin="-16,0,0,0" />
+                                            <!-- Fill width shows this session's share of all bytes in the capture. -->
+                                            <Rectangle Fill="{Binding ShareBrush}" HorizontalAlignment="Left" IsHitTestVisible="False">
+                                                <Rectangle.Width>
+                                                    <MultiBinding Converter="{StaticResource ShareWidth}">
+                                                        <Binding Path="Share" />
+                                                        <Binding Path="SessionColumnWidth" ElementName="Root" />
+                                                    </MultiBinding>
+                                                </Rectangle.Width>
+                                            </Rectangle>
+                                            <Rectangle Grid.Column="1" Fill="{DynamicResource DividerBrush}" />
+                                            <StackPanel VerticalAlignment="Center" Margin="8,0" ToolTip="{Binding ShareToolTip}">
+                                                <DockPanel>
+                                                    <TextBlock DockPanel.Dock="Right" Text="{Binding ShareText}" FontSize="11" VerticalAlignment="Center"
+                                                               Typography.NumeralAlignment="Tabular" />
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Button Style="{StaticResource GlyphButton}" Click="OnToggleClick" Margin="0"
+                                                                AutomationProperties.Name="{Binding AccessibleName}">
+                                                            <TextBlock Text="{Binding CheckGlyph}" Foreground="{Binding CheckBrush}" FontFamily="{StaticResource IconFont}" FontSize="13" />
+                                                        </Button>
+                                                        <TextBlock Text="{Binding Number}" Style="{StaticResource Caption}" Margin="4,0,0,0" Typography.NumeralAlignment="Tabular" />
+                                                        <TextBlock Text="{Binding ProtocolLabel}" FontSize="11" FontWeight="Bold" Foreground="{Binding AccentBrush}" Margin="8,0,0,0" VerticalAlignment="Center" />
+                                                        <TextBlock Text="{Binding PacketCount}" Style="{StaticResource Caption}" Margin="8,0,0,0" />
+                                                    </StackPanel>
+                                                </DockPanel>
+                                                <local:MiddleTrimTextBlock Text="{Binding Endpoints}" FontFamily="{StaticResource MonoFont}" FontSize="11" Margin="0,1,0,0" HorizontalAlignment="Stretch"
+                                                                           Visibility="{Binding EndpointsVisibility, ElementName=Root}" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <local:PinOverlay x:Name="Pins" Grid.RowSpan="2" IsHitTestVisible="False" ClipToBounds="True"
+                                      TimelineWidth="{Binding TimelineWidth, ElementName=Root}" Duration="{Binding Duration, ElementName=Root}"
+                                      ScrollOffset="{Binding HorizontalScroll, ElementName=Root}" />
+
+                    <!-- Drag handle for the session column width, over the pinned 12 px strip. -->
+                    <Thumb x:Name="ColumnThumb" Grid.RowSpan="2" Width="12" HorizontalAlignment="Left" Cursor="SizeWE" DragDelta="OnColumnDrag"
+                           ToolTip="Drag left or right to resize the session column" AutomationProperties.Name="Session column width">
+                        <Thumb.Template>
+                            <ControlTemplate TargetType="Thumb">
+                                <Border Background="Transparent" />
+                            </ControlTemplate>
+                        </Thumb.Template>
+                    </Thumb>
+
+                    <StackPanel x:Name="NoMatches" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" IsHitTestVisible="False">
+                        <TextBlock Text="&#xE71C;" FontFamily="{StaticResource IconFont}" FontSize="36" Foreground="{DynamicResource SecondaryText}" HorizontalAlignment="Center" />
+                        <TextBlock Text="No matching sessions" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,10,0,0" />
+                    </StackPanel>
+                </Grid>
+
+                <GridSplitter x:Name="InspectorSplitter" Grid.Row="3" HorizontalAlignment="Stretch" ResizeDirection="Rows" ResizeBehavior="PreviousAndNext" />
+
+                <!-- Inspector -->
+                <Grid Grid.Row="4">
+                    <DockPanel x:Name="HintBar" Margin="8">
+                        <TextBlock DockPanel.Dock="Right" Text="[schwabber] : vibecoded by dyarovyi" FontSize="10" Foreground="{DynamicResource SecondaryText}" VerticalAlignment="Center" />
+                        <TextBlock Style="{StaticResource Caption}"
+                                   Text="Click to inspect · ↑/↓ move between sessions · Ctrl-click or checkboxes to select multiple · Shift-click for a range · ticks show packet arrivals" />
+                    </DockPanel>
+                    <Grid x:Name="Inspector" Margin="14" Visibility="Collapsed">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <DockPanel>
+                            <TextBlock x:Name="InspectorDuration" DockPanel.Dock="Right" Foreground="{DynamicResource SecondaryText}" Margin="12,0,0,0" />
+                            <TextBlock x:Name="InspectorTitle" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                        </DockPanel>
+                        <TextBlock x:Name="InspectorSize" Grid.Row="1" Margin="0,6,0,0" Typography.NumeralAlignment="Tabular"
+                                   ToolTip="Sum of original packet lengths in both directions, including headers; not application payload or exported file size. 1 kB = 1,000 bytes." />
+                        <TextBlock x:Name="InspectorSummary" Grid.Row="2" Margin="0,4,0,0" FontSize="11" Foreground="{DynamicResource SecondaryText}" TextTrimming="CharacterEllipsis" />
+                        <DataGrid x:Name="PacketGrid" Grid.Row="3" Margin="0,8,0,0" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column"
+                                  GridLinesVisibility="None" CanUserAddRows="False" CanUserDeleteRows="False" SelectionMode="Single"
+                                  SelectionChanged="OnPacketSelectionChanged" PreviewMouseLeftButtonUp="OnPacketGridClick"
+                                  FontFamily="{StaticResource MonoFont}" FontSize="11" RowHeight="20"
+                                  EnableRowVirtualization="True" EnableColumnVirtualization="True">
+                            <DataGrid.ColumnHeaderStyle>
+                                <Style TargetType="DataGridColumnHeader">
+                                    <Setter Property="FontFamily" Value="Segoe UI" />
+                                    <Setter Property="Padding" Value="6,3" />
+                                    <Setter Property="Background" Value="{DynamicResource WindowBackground}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource PrimaryText}" />
+                                    <Setter Property="BorderBrush" Value="{DynamicResource DividerBrush}" />
+                                    <Setter Property="BorderThickness" Value="0,0,1,1" />
+                                </Style>
+                            </DataGrid.ColumnHeaderStyle>
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Packet" Binding="{Binding Id}" Width="60" />
+                                <DataGridTextColumn Header="Relative time" Binding="{Binding RelativeTime}" Width="110" />
+                                <DataGridTextColumn Binding="{Binding DeltaTime}" Width="110">
+                                    <DataGridTextColumn.Header>
+                                        <TextBlock Text="Delta time" ToolTip="Time since the previous packet in this session, in either direction. The first packet has no delta." />
+                                    </DataGridTextColumn.Header>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn Header="Source" Binding="{Binding Source}" Width="*" />
+                                <DataGridTextColumn Header="Destination" Binding="{Binding Destination}" Width="*" />
+                                <DataGridTextColumn Header="Bytes" Binding="{Binding Bytes}" Width="65" />
+                                <DataGridTextColumn Header="Protocol details" Binding="{Binding Details}" Width="2*">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="ToolTip" Value="{Binding Details}" />
+                                            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <DockPanel Grid.Row="4" Margin="0,6,0,0">
+                            <TextBlock DockPanel.Dock="Right" Text="[schwabber] : vibecoded by dyarovyi" FontSize="10" Foreground="{DynamicResource SecondaryText}" VerticalAlignment="Center" />
+                            <TextBlock Style="{StaticResource Caption}" Text="Click a packet to open its inspector window." />
+                        </DockPanel>
+                    </Grid>
+                </Grid>
+            </Grid>
+
+            <!-- Shown while a file is dragged over the window. -->
+            <Grid x:Name="DropOverlay" Margin="12" IsHitTestVisible="False" Visibility="Collapsed">
+                <Rectangle RadiusX="10" RadiusY="10" StrokeThickness="2" StrokeDashArray="5 3" Stroke="{DynamicResource AccentBrush}"
+                           Fill="{DynamicResource WindowBackground}" Opacity="0.92" />
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock Text="&#xE896;" FontFamily="{StaticResource IconFont}" FontSize="40" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" />
+                    <TextBlock x:Name="DropText" Text="Drop to open the capture" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,10,0,0" />
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </DockPanel>
+</Window>

@@ -1,0 +1,206 @@
+<Window x:Class="Schwabber.PacketWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Schwabber"
+        Title="Schwabber — Packet Inspector" Width="1080" Height="820" MinWidth="900" MinHeight="650"
+        Icon="pack://application:,,,/Schwabber.ico" Background="{DynamicResource WindowBackground}" Foreground="{DynamicResource PrimaryText}"
+        UseLayoutRounding="True" TextOptions.TextFormattingMode="Display" ShowInTaskbar="False" WindowStartupLocation="CenterOwner">
+    <Window.CommandBindings>
+        <CommandBinding Command="{x:Static local:PacketWindow.PreviousCommand}" Executed="OnPrevious" CanExecute="CanPrevious" />
+        <CommandBinding Command="{x:Static local:PacketWindow.NextCommand}" Executed="OnNext" CanExecute="CanNext" />
+    </Window.CommandBindings>
+    <Window.Resources>
+        <Style x:Key="CardTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="Foreground" Value="{DynamicResource SecondaryText}" />
+        </Style>
+        <Style x:Key="CardValue" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="17" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Margin" Value="0,3,0,3" />
+            <Setter Property="Typography.NumeralAlignment" Value="Tabular" />
+        </Style>
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource PanelBackground}" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="10" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+        </Style>
+        <Style x:Key="TreeText" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryText}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsNote}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource SecondaryText}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="TreeItem" TargetType="TreeViewItem">
+            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+            <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
+            <Setter Property="Padding" Value="2,1" />
+            <EventSetter Event="Selected" Handler="OnTreeItemSelected" />
+            <EventSetter Event="PreviewMouseRightButtonDown" Handler="OnTreeItemRightClick" />
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" MinHeight="180" />
+            <RowDefinition Height="6" />
+            <RowDefinition Height="*" MinHeight="150" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Navigation -->
+        <DockPanel>
+            <CheckBox x:Name="IncludeHeaders" DockPanel.Dock="Right" IsChecked="True" VerticalAlignment="Center"
+                      Checked="OnIncludeHeadersChanged" Unchecked="OnIncludeHeadersChanged"
+                      ToolTip="Show link, IP and TCP/UDP headers for captured frames. Application headers stay in payload. Reassembled/decrypted sources are shown exactly as Wireshark provides them.">
+                Include headers
+            </CheckBox>
+            <Button DockPanel.Dock="Left" Command="{x:Static local:PacketWindow.PreviousCommand}" Margin="0" ToolTip="Previous packet in this session (Ctrl+Left, Alt+Left or Page Up)">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE76B;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBlock Text="Previous" />
+                </StackPanel>
+            </Button>
+            <Button DockPanel.Dock="Left" Command="{x:Static local:PacketWindow.NextCommand}" ToolTip="Next packet in this session (Ctrl+Right, Alt+Right or Page Down)">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE76C;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                    <TextBlock Text="Next" />
+                </StackPanel>
+            </Button>
+            <StackPanel Orientation="Horizontal" Margin="12,0" VerticalAlignment="Center">
+                <TextBlock x:Name="PositionText" VerticalAlignment="Center" Typography.NumeralAlignment="Tabular" />
+                <!-- Exact arrival time, set a little apart from the position. -->
+                <TextBlock x:Name="ArrivalText" Margin="20,0,0,0" VerticalAlignment="Center" Typography.NumeralAlignment="Tabular"
+                           ToolTip="Arrival time relative to the first packet of the capture" />
+            </StackPanel>
+        </DockPanel>
+
+        <DockPanel Grid.Row="1" Margin="0,8,0,0">
+            <TextBlock x:Name="ProtocolText" DockPanel.Dock="Right" Foreground="{DynamicResource SecondaryText}" VerticalAlignment="Center" />
+            <TextBlock x:Name="EndpointsText" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+        </DockPanel>
+
+        <!-- Sizes -->
+        <Grid Grid.Row="2" Margin="0,8,-8,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Border Style="{StaticResource Card}" ToolTip="The whole frame on the wire: link, IP and transport headers plus payload.">
+                <StackPanel>
+                    <TextBlock Text="WITH HEADERS" Style="{StaticResource CardTitle}" />
+                    <TextBlock x:Name="WithHeadersValue" Style="{StaticResource CardValue}" />
+                    <TextBlock x:Name="WithHeadersDetail" FontSize="11" Foreground="{DynamicResource SecondaryText}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="1" Style="{StaticResource Card}" ToolTip="Transport payload only: the bytes after the TCP, UDP or ICMP header.">
+                <StackPanel>
+                    <TextBlock Text="WITHOUT HEADERS" Style="{StaticResource CardTitle}" />
+                    <TextBlock x:Name="WithoutHeadersValue" Style="{StaticResource CardValue}" />
+                    <TextBlock x:Name="WithoutHeadersDetail" FontSize="11" Foreground="{DynamicResource SecondaryText}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="2" Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="HEADERS" Style="{StaticResource CardTitle}" />
+                    <TextBlock x:Name="HeadersValue" Style="{StaticResource CardValue}" />
+                    <TextBlock x:Name="HeadersDetail" FontSize="11" Foreground="{DynamicResource SecondaryText}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Wireshark analysis -->
+        <DockPanel Grid.Row="3" Margin="0,8,0,0">
+            <StackPanel x:Name="AnalyzingPanel" DockPanel.Dock="Right" Orientation="Horizontal" Visibility="Collapsed">
+                <ProgressBar IsIndeterminate="True" Width="50" Height="5" VerticalAlignment="Center" />
+                <TextBlock Text="Analyzing capture…" FontSize="11" Margin="6,0,0,0" VerticalAlignment="Center" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <CheckBox x:Name="UseWireshark" Content="Wireshark analysis" IsChecked="True" VerticalAlignment="Center"
+                          Checked="OnUseWiresharkChanged" Unchecked="OnUseWiresharkChanged"
+                          ToolTip="Optional full-capture analysis for reassembly/decryption. Built-in fields and byte selection work without Wireshark." />
+                <Button Content="Choose TLS key log…" Click="OnChooseKeys" Margin="12,0,0,0" />
+                <TextBlock x:Name="KeyLogName" FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center" />
+                <Button x:Name="ClearKeysButton" Content="Clear keys" Click="OnClearKeys" Visibility="Collapsed" />
+            </StackPanel>
+        </DockPanel>
+
+        <StackPanel Grid.Row="4">
+            <TextBox x:Name="ErrorText" FontSize="11" Foreground="#FF3B30" Background="Transparent" BorderThickness="0" IsReadOnly="True"
+                     TextWrapping="Wrap" Margin="0,6,0,0" Visibility="Collapsed" />
+            <TextBlock x:Name="TruncatedText" FontSize="11" Foreground="#FF9500" Margin="0,6,0,0" Visibility="Collapsed"
+                       Text="Capture truncated: some on-wire bytes are unavailable." />
+        </StackPanel>
+
+        <!-- Packet details -->
+        <DockPanel Grid.Row="5" Margin="0,8,0,0">
+            <TextBlock x:Name="DetailsTitle" DockPanel.Dock="Top" FontSize="11" FontWeight="Bold" Margin="0,0,0,4" Text="Packet details · Built-in analyzer" />
+            <Grid>
+                <TreeView x:Name="FieldTree" SelectedItemChanged="OnTreeSelectionChanged" VirtualizingPanel.IsVirtualizing="False"
+                          ItemContainerStyle="{StaticResource TreeItem}" ContextMenuOpening="OnTreeContextMenu">
+                    <TreeView.ContextMenu>
+                        <ContextMenu />
+                    </TreeView.ContextMenu>
+                    <TreeView.ItemTemplate>
+                        <HierarchicalDataTemplate DataType="{x:Type local:FieldItem}" ItemsSource="{Binding Children}">
+                            <TextBlock Text="{Binding Label}" FontWeight="{Binding Weight}" Style="{StaticResource TreeText}" />
+                        </HierarchicalDataTemplate>
+                    </TreeView.ItemTemplate>
+                </TreeView>
+                <TreeView x:Name="WiresharkTree" SelectedItemChanged="OnWiresharkSelectionChanged" VirtualizingPanel.IsVirtualizing="False"
+                          ItemContainerStyle="{StaticResource TreeItem}" Visibility="Collapsed" ContextMenuOpening="OnTreeContextMenu">
+                    <TreeView.ContextMenu>
+                        <ContextMenu />
+                    </TreeView.ContextMenu>
+                    <TreeView.ItemTemplate>
+                        <HierarchicalDataTemplate DataType="{x:Type local:WiresharkItem}" ItemsSource="{Binding Children}">
+                            <TextBlock Text="{Binding Label}" Style="{StaticResource TreeText}" />
+                        </HierarchicalDataTemplate>
+                    </TreeView.ItemTemplate>
+                </TreeView>
+            </Grid>
+        </DockPanel>
+        <GridSplitter Grid.Row="6" HorizontalAlignment="Stretch" VerticalAlignment="Center" Height="4" Background="Transparent" ResizeDirection="Rows" />
+
+        <!-- Bytes -->
+        <DockPanel Grid.Row="7">
+            <DockPanel DockPanel.Dock="Top">
+                <CheckBox x:Name="AsciiOnly" DockPanel.Dock="Right" Content="ASCII only" VerticalAlignment="Center" Checked="OnAsciiOnlyChanged" Unchecked="OnAsciiOnlyChanged" />
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Data source" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <ComboBox x:Name="SourcePicker" MinWidth="240" MaxWidth="600" SelectionChanged="OnSourceChanged" />
+                </StackPanel>
+            </DockPanel>
+            <TextBlock x:Name="SourceCaption" DockPanel.Dock="Top" FontSize="11" Foreground="{DynamicResource SecondaryText}" TextWrapping="Wrap" Margin="0,6" />
+            <Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1">
+                <Grid>
+                    <ScrollViewer x:Name="HexScroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                        <local:HexView x:Name="Bytes" HorizontalAlignment="Left" />
+                    </ScrollViewer>
+                    <TextBlock x:Name="NoPayload" Text="This packet has no payload. Turn on Include headers to see its bytes."
+                               Foreground="{DynamicResource SecondaryText}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                               TextWrapping="Wrap" TextAlignment="Center" MaxWidth="420" Visibility="Collapsed" />
+                </Grid>
+            </Border>
+        </DockPanel>
+
+        <!-- Selected field -->
+        <Border Grid.Row="8" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,1,0,0" Margin="0,8,0,0" Padding="0,6,0,0">
+            <StackPanel>
+                <TextBlock x:Name="FieldPath" FontSize="11" FontWeight="Bold" TextTrimming="CharacterEllipsis" />
+                <TextBlock x:Name="FieldDetail" FontSize="11" Foreground="{DynamicResource SecondaryText}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

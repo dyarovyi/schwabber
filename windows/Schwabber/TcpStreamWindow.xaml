@@ -1,0 +1,47 @@
+<Window x:Class="Schwabber.TcpStreamWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Schwabber"
+        Title="Reassembled TCP — Schwabber" Width="900" Height="650" MinWidth="750" MinHeight="450"
+        Icon="pack://application:,,,/Schwabber.ico" Background="{DynamicResource WindowBackground}" Foreground="{DynamicResource PrimaryText}"
+        UseLayoutRounding="True" TextOptions.TextFormattingMode="Display" ShowInTaskbar="False" WindowStartupLocation="CenterOwner">
+    <DockPanel Margin="14">
+        <TextBlock DockPanel.Dock="Top" Text="TCP wire bytes · TLS content remains encrypted" FontSize="14" FontWeight="SemiBold" />
+        <TextBlock DockPanel.Dock="Top" FontSize="11" Foreground="{DynamicResource SecondaryText}" TextWrapping="Wrap" Margin="0,6,0,10"
+                   Text="Directions are separate. Gaps stay separate; overlapping bytes are kept from the first segment in sequence order. Offsets start at the first captured data byte. Connections spanning more than 2 GiB of sequence space are not supported." />
+        <TextBlock x:Name="ErrorText" DockPanel.Dock="Bottom" Foreground="#FF3B30" TextWrapping="Wrap" Margin="0,8,0,0" Visibility="Collapsed" />
+        <Grid>
+            <StackPanel x:Name="LoadingPanel" Orientation="Horizontal" VerticalAlignment="Top">
+                <ProgressBar IsIndeterminate="True" Width="60" Height="6" VerticalAlignment="Center" />
+                <TextBlock Text="Reassembling…" Margin="8,0,0,0" />
+            </StackPanel>
+            <TextBlock x:Name="EmptyText" Text="No captured TCP payload in this session." VerticalAlignment="Top" Visibility="Collapsed" />
+            <DockPanel x:Name="StreamPanel" Visibility="Collapsed">
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
+                    <TextBlock Text="Direction" VerticalAlignment="Center" Width="120" />
+                    <ComboBox x:Name="DirectionPicker" MinWidth="360" SelectionChanged="OnDirectionChanged" />
+                </StackPanel>
+                <TextBlock x:Name="StatsText" DockPanel.Dock="Top" FontSize="11" Margin="0,8" />
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
+                    <TextBlock Text="Contiguous chunk" VerticalAlignment="Center" Width="120" />
+                    <ComboBox x:Name="ChunkPicker" MinWidth="360" SelectionChanged="OnChunkChanged" />
+                </StackPanel>
+                <DockPanel DockPanel.Dock="Top" Margin="0,10">
+                    <Button x:Name="SaveButton" DockPanel.Dock="Right" Content="Save chunk…" Click="OnSave" />
+                    <CheckBox x:Name="TextPreview" Content="Text preview" VerticalAlignment="Center" Checked="OnPreviewChanged" Unchecked="OnPreviewChanged" />
+                </DockPanel>
+                <TextBlock x:Name="PreviewLimit" DockPanel.Dock="Bottom" FontSize="11" Margin="0,6,0,0" Visibility="Collapsed"
+                           Text="Preview limited to 64 KiB; Save chunk exports all bytes." />
+                <Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="1">
+                    <Grid>
+                        <ScrollViewer x:Name="HexScroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                            <local:HexView x:Name="Bytes" HorizontalAlignment="Left" />
+                        </ScrollViewer>
+                        <TextBox x:Name="TextBox" IsReadOnly="True" BorderThickness="0" FontFamily="{StaticResource MonoFont}" FontSize="12" TextWrapping="Wrap"
+                                 VerticalScrollBarVisibility="Auto" Visibility="Collapsed" />
+                    </Grid>
+                </Border>
+            </DockPanel>
+        </Grid>
+    </DockPanel>
+</Window>

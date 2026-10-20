@@ -1,0 +1,48 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Every key here must also exist in Dark.xaml. -->
+    <SolidColorBrush x:Key="WindowBackground" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="PrimaryText" Color="#1C1C1E" />
+    <SolidColorBrush x:Key="SecondaryText" Color="#6E6E73" />
+    <SolidColorBrush x:Key="PlaceholderText" Color="#9A9AA0" />
+    <SolidColorBrush x:Key="DisabledText" Color="#A8A8AE" />
+    <SolidColorBrush x:Key="DividerBrush" Color="#E3E3E8" />
+    <SolidColorBrush x:Key="GridLineBrush" Color="#EFEFF2" />
+    <SolidColorBrush x:Key="PanelBackground" Color="#F4F4F6" />
+    <SolidColorBrush x:Key="StatusBackground" Color="#FAFAFB" />
+    <SolidColorBrush x:Key="ButtonBackground" Color="#F3F3F5" />
+    <SolidColorBrush x:Key="ButtonBorder" Color="#C9C9CF" />
+    <SolidColorBrush x:Key="ButtonHover" Color="#E7E7EB" />
+    <SolidColorBrush x:Key="ButtonPressed" Color="#D9D9DF" />
+    <SolidColorBrush x:Key="InputBackground" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="InputBorder" Color="#C9C9CF" />
+    <SolidColorBrush x:Key="InputHoverBorder" Color="#A5A5AD" />
+    <SolidColorBrush x:Key="AccentBrush" Color="#007AFF" />
+    <SolidColorBrush x:Key="OnAccentText" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="PopupBackground" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="ItemHover" Color="#EDEDF1" />
+    <SolidColorBrush x:Key="SelectionBackground" Color="#CCE4FF" />
+    <SolidColorBrush x:Key="AlternateRow" Color="#F7F7F9" />
+    <SolidColorBrush x:Key="TrackBackground" Color="#DCDCE1" />
+    <SolidColorBrush x:Key="ThumbBackground" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="ScrollThumb" Color="#C2C2C8" />
+    <SolidColorBrush x:Key="ScrollThumbHover" Color="#9E9EA5" />
+    <SolidColorBrush x:Key="HexBackground" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="HexHeaderTint" Color="#F1F1F4" />
+    <SolidColorBrush x:Key="HexSelection" Color="#C7DEFF" />
+    <SolidColorBrush x:Key="HexHover" Color="#E6EFFC" />
+    <SolidColorBrush x:Key="HexOffset" Color="#8E8E93" />
+    <SolidColorBrush x:Key="PinBrush" Color="#FF9500" />
+    <SolidColorBrush x:Key="HexHeaderText" Color="#55555C" />
+
+    <!-- Built-in control templates (DataGrid, TreeView, ScrollViewer corner) read these system keys. -->
+    <SolidColorBrush x:Key="{x:Static SystemColors.WindowBrushKey}" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.WindowTextBrushKey}" Color="#1C1C1E" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.ControlBrushKey}" Color="#F4F4F6" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.ControlTextBrushKey}" Color="#1C1C1E" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.GrayTextBrushKey}" Color="#A8A8AE" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#CCE4FF" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#1C1C1E" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#E3E3E8" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="#1C1C1E" />
+</ResourceDictionary>

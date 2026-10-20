@@ -1,0 +1,15 @@
+.build/
+.swiftpm/
+.DS_Store
+*.pcap
+*.pcapng
+dist/
+testcaps/
+
+# Windows (.NET)
+bin/
+obj/
+.vs/
+*.user
+TestResults/
+testcaps/
