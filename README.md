@@ -35,11 +35,7 @@ Open `Package.swift` in Xcode to develop and run the app.
 open dist/Schwabber.app
 ```
 
-You can also double-click `dist/Schwabber.app` in Finder or copy it to Applications. The script builds an optimized release executable for the current Mac architecture, creates the bundle metadata, and applies an ad-hoc signature for local use. Distribution to other Macs requires Developer ID signing and notarization.
-
-### Validation on this machine
-
-`swift build` succeeds. Eleven core checks passed using the standalone Swift harness (see Additional verification below). `swift test` requires XCTest, which is absent from this machine's Command Line Tools installation; select a full Xcode installation to use the standard test runner. The GUI has not yet been visually verified.
+You can also double-click `dist/Schwabber.app` in Finder or copy it to Applications. The script builds an optimized release executable for the current Mac architecture, creates the bundle metadata, and applies an ad-hoc signature for local use. 
 
 ## DNS inspection
 
@@ -84,10 +80,6 @@ Click a session to see its total size in **bytes and decimal kilobytes** (1 kB =
 
 Select sessions with checkboxes, ⌘-click, Shift-click, or **Select shown**, then click **Export selected…**. Choose a filename and folder in the Save dialog to write a separate `.pcap` without opening Wireshark. Export uses the same packet-preserving writer as the Wireshark action; its format limits described above still apply. The app confirms the saved path after export; cancellation writes nothing.
 
-## App icon
-
-The mop icon is stored in `Assets/Schwabber-icon.png`, with the macOS icon in `Assets/Schwabber.icns`. `scripts/build-app.sh` regenerates the icon sizes and embeds the icon in the app bundle. Generation details are recorded in `Assets/icon-prompt.md`.
-
 ## Packet popup inspector
 
 Click a session, then a packet row to open a separate resizable inspector window. Like the Windows version, it has two panes: expandable protocol fields and interactive hex/ASCII bytes. Click a field to highlight its bytes; click a byte to select its most specific field. Hover over bytes for field details. Headers are shaded. Field selection and tree expansion are remembered while navigating packets.
@@ -114,7 +106,7 @@ Open captures from Finder using **Open With → Schwabber**, drag a capture onto
 
 The native packet tree also decodes DNS MX/TXT records, TLS supported versions/groups and named cipher suites, and STUN address/text/error attributes. These remain packet-local details; the optional Wireshark mode provides reassembly/decryption when available. No theme picker was added.
 
-## RTP and STUN (macOS and Windows)
+## RTP and STUN 
 
 Both apps include RTP and STUN in protocol filters, session summaries, search, and packet details. RTP over UDP is detected heuristically from its version-2 header, CSRC count, extension length, and padding. Packet details expose marker/payload type, sequence, timestamp, SSRC, CSRCs, raw extension data, media bytes, and padding. The RTP/RTCP multiplexing reserved payload-type range (64–95) is excluded to avoid labeling RTCP as RTP. False positives remain possible without signaling context.
 
@@ -122,7 +114,7 @@ Dynamic payload types remain numeric: there is no SDP codec mapping, audio/video
 
 STUN recognition validates the magic cookie and message/attribute lengths and exposes transaction IDs and attributes. TURN method summaries include Allocate, Refresh, Send, Data, CreatePermission, and ChannelBind. TURN ChannelData is described below; encapsulated media is retained as raw channel bytes.
 
-## Real-time communication protocols (both platforms)
+## Real-time communication protocols 
 
 RTCP, SIP, DTLS, and TURN appear in the protocol picker, session labels, search, and packet details with byte-linked fields.
 
@@ -147,21 +139,7 @@ macOS uses built-in libpcap and needs permission to open `/dev/bpf` devices (for
 
 Recordings are retained in `Schwabber-Recordings` beneath the operating system’s temporary directory, including after canceling Save or starting another recording. Save important recordings permanently before temporary-file cleanup. Supported packet bytes remain in memory for the timeline, so large recordings require sufficient memory and disk space. The inspector is a snapshot of the session when opened; reopen it for newer packets. Stopping ends at the packets already read, rather than draining all queued adapter traffic.
 
-Windows live capture was verified with Npcap on a Wi-Fi adapter: sessions updated while recording, and Stop closed a valid PCAP.
-
-## Compact macOS layout
-
-The session column stays outside the horizontally scrolling timeline. Drag its vertical divider to adjust width; both columns share vertical scrolling. The packet footer keeps its resizable horizontal divider. Opening a different capture resets the split layout and fits the timeline at 1× zoom.
-
-Secondary controls are in the menu bar: **File** contains Open, Export selected sessions, and Open selected in Wireshark; **Sessions** contains Select shown and Clear selection; **Capture** contains the interface picker, refresh, Start/Stop, and Save recording. The compact top area retains filters, zoom, counts and a Stop button while recording.
-
-## macOS performance
-
-Timeline rendering is limited to the visible session rows plus a small scrolling buffer, including the horizontally scrollable graphs. Session byte totals and protocol summaries are maintained incrementally. Search short-circuits without constructing a concatenated string of every packet's details. Idle live captures no longer publish unchanged snapshots, and opening another file releases the previous recording's in-memory snapshot (its temporary PCAP remains available). Full packet bytes are still retained for inspection/export, so memory continues to grow with capture size.
-
-A synthetic 29,000-packet/200-session core benchmark showed roughly 7× faster repeated metadata access after caching. This benchmark excludes SwiftUI rendering and does not establish the full app's memory use or reproduce the reported 700 MB case.
-
-## Session actions and filters (macOS)
+## Session actions and filters 
 
 After stopping a recording, use **File → Save PCAP…** (⌘S). Right-click a session label or timeline to inspect it, open that session in Wireshark, export it, or change selection. Explicit session actions target the clicked row; selected-session actions target the checked rows.
 
@@ -169,7 +147,7 @@ The Protocols menu offers **All** or multiple individual checkboxes. Selected pr
 
 Search matches addresses, ports and protocol details case-insensitively, or exact case-sensitive UTF-8 text in individual packet payloads. Use `x00x01xFF` for hexadecimal payload bytes. Invalid hex patterns are indicated. Payload searches exclude link/network/transport headers and do not reassemble messages or decrypt content. Filtering resets scrolling to the top; the list height and visible-row range are bounded by its filtered contents.
 
-## HTTP/2 and TCP-stream reassembly (macOS)
+## HTTP/2 and TCP-stream reassembly 
 
 HTTP/2 now has a protocol filter and native fields for frame length/type, flags, stream IDs, SETTINGS, WINDOW_UPDATE, RST_STREAM and GOAWAY. Complete packet-local frame sequences are recognized heuristically; the connection preface provides stronger identification. HEADERS/PUSH_PROMISE/CONTINUATION payloads remain raw HPACK blocks. This is not a full connection-state/HPACK implementation, and encrypted HTTP/2 remains TLS without decryption. Frame definitions follow [RFC 9113](https://www.rfc-editor.org/rfc/rfc9113.html).
 
@@ -177,15 +155,13 @@ Right-click a TCP or TLS session and choose **Reassemble TCP stream…**. No Wir
 
 Offsets are relative to the first captured data byte; missing prefixes/suffixes cannot be inferred. Reassembly inherits the endpoint/idle-time session grouping, so reused connections can be merged. Sequence-space spans of 2 GiB or more are unsupported. For conflicting overlaps the first segment in sequence-order wins (capture ID breaks ties). Checksums are not verified. Windows has the same HTTP/2 decoding and Reassemble TCP stream window.
 
-Validation: 18 core checks pass, including HTTP/2 control frames, malformed lengths, native fields, out-of-order segments, retransmission, gaps, and sequence wraparound. Release build and signature verification passed; the new window still needs visual verification.
-
 ### Wireshark data sources in the macOS packet inspector
 
 The inspector enables Wireshark analysis by default and uses the `sharkd` executable shipped with Wireshark. The Data source picker lists the actual sources produced for the selected frame, including decrypted QUIC and reassembled TCP/TLS when available. Choose a TLS key log for encrypted application traffic; sources that Wireshark cannot reconstruct are not fabricated. Reassembly may be attached to the final contributing frame.
 
 Both hexadecimal bytes and the ASCII column support clicking to select the most specific decoded field. Clicking a field switches to its data source and highlights its byte range. Generated fields have no byte highlight. The Include headers switch affects captured-frame bytes only. Previous/Next reanalyzes the selected packet and clears stale selections. If Wireshark is unavailable, the built-in captured-frame inspector remains usable.
 
-### macOS navigation, pins and copying
+### Navigation, pins and copying
 
 - Up/Down select the previous/next visible session; Shift extends selection. Home/End jump to the first/last session. The list scrolls to keep the selected row visible; text fields and packet tables keep their own key handling.
 - Click the time ruler or empty timeline space to pin a time across all sessions. Packet marks still open the packet inspector. Maximum zoom shows two seconds across the visible timeline; the left end of the slider fits the capture (with at least a two-second time span). Right-click a pin to remove it, or use View → Clear timeline pins. Pins reset when another capture is opened.
@@ -195,6 +171,6 @@ Both hexadecimal bytes and the ASCII column support clicking to select the most 
 - Help → Schwabber Help (F1) and Keyboard shortcuts provide an in-app guide. About Schwabber is in the standard application menu.
 - Interface selection prefers an active non-loopback interface with addresses when no previously selected interface is available.
 
-### Packet chunks and inspector tracking (macOS)
+### Packet chunks and inspector tracking 
 
 Nearby packet marks (less than four pixels between starts) merge into chunks at the current zoom. Clicking a chunk opens its first packet; zooming or resizing recomputes the grouping. The inspector header shows the packet's session position, position within a multi-packet chunk, and arrival time relative to the capture start. Its packet is marked on the timeline and revealed vertically and horizontally when navigating; closing the inspector removes the marker. Hover a pin on a session row to see its exact time. The ruler skips overlapping end labels.
